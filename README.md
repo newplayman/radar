@@ -20,12 +20,18 @@ MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜
   - `telegram-schedule`：按间隔定时扫描并推送。
   - `telegram-bot`：长轮询处理 `@提及` 查询。
   - 群组内默认 `require_mention=true`，只响应 @bot 的消息。
-- 单元测试：12 个。
+- 单元测试覆盖 CLI、配置、Telegram、评分等核心逻辑。
+
+## 项目文档
+
+- [ROADMAP.md](ROADMAP.md)：里程碑、后续版本规划和非目标。
+- [CHANGELOG.md](CHANGELOG.md)：版本变更记录。
 
 ## 安装/运行
 
 ```bash
-cd /root/banker-radar
+git clone https://github.com/newplayman/radar.git
+cd radar
 python3 -m pip install -e . --break-system-packages
 python3 -m pytest -q
 
