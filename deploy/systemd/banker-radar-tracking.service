@@ -7,4 +7,4 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/root/banker-radar
 EnvironmentFile=-/root/banker-radar/.env
-ExecStart=/usr/bin/flock -n /run/banker-radar-tracking.lock /usr/local/bin/banker-radar track-signals --config /root/banker-radar/configs/radar.yaml --db /root/banker-radar/data/radar.db
+ExecStart=/usr/bin/flock -n /run/banker-radar-tracking.lock /usr/local/bin/banker-radar track-signals --config /root/banker-radar/configs/radar.yaml

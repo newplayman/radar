@@ -51,8 +51,9 @@ gmgn:
   timeout_seconds: 20
 
 storage:
-  # 运行环境可改为 postgres，并在 .env 设置 DATABASE_URL；缺失时自动回落到 --db SQLite。
-  backend: sqlite
+  # 生产运行只使用 PostgreSQL；DATABASE_URL 放在 /root/banker-radar/.env，不入库。
+  # SQLite 仅保留给单元测试/显式本地 fallback，不作为默认运行库。
+  backend: postgres
   postgres:
     url_env: DATABASE_URL
     psql_path: psql

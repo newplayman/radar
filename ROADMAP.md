@@ -7,7 +7,7 @@
 ## 当前状态
 
 - 当前版本：v0.4.0
-- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、Binance Web3/GMGN 聪明钱增强、链上链下共振榜、信号追踪/回测/每日复盘、SQLite/PostgreSQL 存储、Telegram 定时播报和 @提及查询。
+- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、Binance Web3/GMGN 聪明钱增强、链上链下共振榜、信号追踪/回测/每日复盘、PostgreSQL 生产存储、Telegram 定时播报和 @提及查询。
 - 部署形态：CLI + systemd timer/service。
 
 ## Milestone 0 — 项目启动与 v0.1 MVP（已完成）
@@ -50,7 +50,7 @@
 - Whale Buy/Sell、exitRate、maxGain、token tag 解析。
 - Token Audit 风险过滤，高风险 token 不进入正向 Smart Money 榜单。
 - 新增榜单：`🧠 链上聪明钱榜`、`🧬 链上链下共振榜`。
-- PostgreSQL JSONB 存储后端，SQLite 作为测试/fallback。
+- PostgreSQL JSONB 生产存储；SQLite 仅保留为测试/显式本地临时后端。
 
 ## Milestone 3 — v0.4 信号追踪与回测（已完成）
 

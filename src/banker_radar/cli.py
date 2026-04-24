@@ -259,7 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="庄家雷达 v0.4")
     parser.add_argument("command", nargs="?", default="scan", choices=["scan", "telegram-send", "telegram-schedule", "telegram-bot", "track-signals", "backtest-report", "telegram-review"], help="command to run")
     parser.add_argument("--config", default="configs/radar.yaml")
-    parser.add_argument("--db", default="data/radar.db")
+    parser.add_argument("--db", default="", help="SQLite path for explicit test/fallback runs only; PostgreSQL runtime ignores this")
     parser.add_argument("--symbols", default="", help="comma separated Binance futures symbols, e.g. SAGAUSDT,REDUSDT")
     parser.add_argument("--telegram-token", default="")
     parser.add_argument("--telegram-chat-id", default="")

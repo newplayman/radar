@@ -11,7 +11,7 @@ All notable changes to Banker Radar are documented here.
 - Backtest metrics: return, max runup, max drawdown, directional win rate, low-sample and outlier warnings.
 - CLI commands: `track-signals`, `backtest-report`, `telegram-review`.
 - Persistent `provider_cooldowns` and idempotent `review_sends` tables for systemd oneshot safety.
-- PostgreSQL schema using `ON CONFLICT DO NOTHING` and `FOR UPDATE SKIP LOCKED`; SQLite fallback kept for tests/local use.
+- PostgreSQL schema using `ON CONFLICT DO NOTHING` and `FOR UPDATE SKIP LOCKED`; SQLite kept only for tests or explicit local temporary runs.
 - systemd unit templates for tracking and daily review timers.
 
 ### Notes
@@ -29,7 +29,7 @@ All notable changes to Banker Radar are documented here.
 - Chain/contract resonance signals and Telegram sections:
   - `🧠 链上聪明钱榜`
   - `🧬 链上链下共振榜`
-- PostgreSQL JSONB storage backend via `psql`, with SQLite fallback/test backend retained.
+- PostgreSQL JSONB storage backend via `psql`; SQLite retained only as test/explicit-local backend, not production fallback.
 - `--no-smart-money` CLI flag for emergency degradation to pure contract radar.
 - v0.3 unit tests for collectors, rate-limit recovery, scoring, resonance, formatter, CLI flag, and storage factory.
 
