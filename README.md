@@ -31,6 +31,7 @@
 
 ## 项目文档
 
+- [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)：新对话/新 Agent 接手项目时的上下文交接文档。
 - [ROADMAP.md](ROADMAP.md)：里程碑、后续版本规划和非目标。
 - [CHANGELOG.md](CHANGELOG.md)：版本变更记录。
 
