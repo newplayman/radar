@@ -6,8 +6,8 @@
 
 ## 当前状态
 
-- 当前版本：v0.3.0
-- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、Binance Web3/GMGN 聪明钱增强、链上链下共振榜、SQLite/PostgreSQL 存储、Telegram 定时播报和 @提及查询。
+- 当前版本：v0.4.0
+- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、Binance Web3/GMGN 聪明钱增强、链上链下共振榜、信号追踪/回测/每日复盘、SQLite/PostgreSQL 存储、Telegram 定时播报和 @提及查询。
 - 部署形态：CLI + systemd timer/service。
 
 ## Milestone 0 — 项目启动与 v0.1 MVP（已完成）
@@ -52,17 +52,18 @@
 - 新增榜单：`🧠 链上聪明钱榜`、`🧬 链上链下共振榜`。
 - PostgreSQL JSONB 存储后端，SQLite 作为测试/fallback。
 
-## Milestone 3 — v0.4 信号追踪与回测
+## Milestone 3 — v0.4 信号追踪与回测（已完成）
 
 目标：验证信号是否具有统计优势，避免“玄学雷达”。
 
-计划：
+已完成：
 
-- 每条信号落库时记录 entry price、score、signal_type、features。
+- `signal_tracking` 表：记录 entry price、score、risk、signal_type、source、features metadata。
 - 自动追踪 15m / 1h / 4h / 24h 后价格表现。
-- 统计 max_runup、max_drawdown、胜率、平均收益、盈亏比。
-- 每日自动生成“昨日信号复盘”。
-- 为不同信号类型单独统计表现：暗流吸筹、空头燃料、综合异动、链上共振。
+- 统计 return、max_runup、max_drawdown、胜率、平均收益。
+- `backtest-report` 与 `telegram-review` 每日复盘。
+- 低样本、中性信号、outlier 标记，避免误导性胜率。
+- provider cooldown 持久化、review send 幂等、PostgreSQL `FOR UPDATE SKIP LOCKED` 并发领取。
 
 ## Milestone 4 — v0.5 单币深度分析
 

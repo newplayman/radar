@@ -5,7 +5,7 @@ import os
 import time
 from dataclasses import replace
 
-from banker_radar.alerts.formatter import format_report
+from banker_radar.alerts.formatter import format_backtest_report, format_report
 from banker_radar.alerts.telegram import TelegramClient
 from banker_radar.collectors.binance_futures import fetch_features, fetch_klines, fetch_top_usdt_symbols
 from banker_radar.collectors.binance_web3 import BinanceWeb3Collector
@@ -20,6 +20,8 @@ from banker_radar.signals.smart_money import score_chain_features
 from banker_radar.storage import create_store
 from banker_radar.telegram.bot import TelegramRadarBot
 from banker_radar.utils.rate_limit import ProviderHealth
+from banker_radar.collectors.price_observer import RequestBudget
+from banker_radar.tracking.service import enqueue_tracking_for_recent_signals, process_due_tracking, resolve_period, summarize_completed_tracking
 
 _CHAIN_PROVIDER_HEALTH: dict[str, ProviderHealth] = {
     "binance_web3_provider": ProviderHealth(max_failures=1, cooldown_seconds=900),
@@ -193,9 +195,69 @@ def run_telegram_bot(config_path: str, db_path: str, args: argparse.Namespace) -
         time.sleep(1)
 
 
+
+def _parse_windows(value) -> list[int]:
+    if isinstance(value, (list, tuple)):
+        return [int(x) for x in value]
+    return [int(x) for x in str(value or "15,60,240,1440").replace(" ", "").split(",") if str(x).strip()]
+
+
+def run_track_signals(config_path: str, db_path: str, args: argparse.Namespace) -> str:
+    cfg = load_config(config_path)
+    tr_cfg = cfg.get("tracking", {})
+    windows = _parse_windows(getattr(args, "windows", "") or tr_cfg.get("windows_minutes", "15,60,240,1440"))
+    store = create_store(cfg, db_path=db_path)
+    store.init()
+    enqueued = enqueue_tracking_for_recent_signals(store, windows, since_hours=int(tr_cfg.get("enqueue_since_hours", 48)), limit=int(tr_cfg.get("enqueue_limit", 500)))
+    budget = RequestBudget(
+        max_requests=int(tr_cfg.get("max_price_requests_per_run", tr_cfg.get("request_budget_per_run", 80))),
+        max_requests_per_provider=int(tr_cfg.get("max_requests_per_provider_per_run", tr_cfg.get("max_price_requests_per_run", tr_cfg.get("request_budget_per_run", 80)))),
+    )
+    stats = process_due_tracking(
+        store,
+        limit=int(getattr(args, "limit", 0) or tr_cfg.get("process_limit", tr_cfg.get("max_signals_per_run", 50))),
+        success_threshold_pct=float(tr_cfg.get("success_threshold_pct", 2.0)),
+        outlier_return_pct=float(tr_cfg.get("outlier_return_pct", 80.0)),
+        interval=str(tr_cfg.get("provider_interval", "15m")),
+        request_budget=budget,
+    )
+    return f"v0.4 tracking 完成：新增追踪 {enqueued} 条，处理 {stats['processed']} 条，完成 {stats['completed']} 条，失败可重试 {stats['failed_retryable']} 条，永久失败 {stats['failed_permanent']} 条。"
+
+
+def run_backtest_report(config_path: str, db_path: str, args: argparse.Namespace) -> str:
+    cfg = load_config(config_path)
+    tr_cfg = cfg.get("tracking", {})
+    store = create_store(cfg, db_path=db_path)
+    store.init()
+    start, end, label = resolve_period(getattr(args, "period", "yesterday"))
+    summaries = store.backtest_summaries(period_start=start, period_end=end, min_samples=int(tr_cfg.get("min_samples", 5)))
+    return format_backtest_report(summaries, title="庄家雷达 v0.4 信号复盘", period_label=label)
+
+
+def run_telegram_review(config_path: str, db_path: str, args: argparse.Namespace) -> str:
+    import hashlib
+    cfg = load_config(config_path)
+    token, chat_id, _, _, _ = _telegram_config(cfg, args)
+    store = create_store(cfg, db_path=db_path)
+    store.init()
+    start, end, label = resolve_period(getattr(args, "period", "yesterday"))
+    tr_cfg = cfg.get("tracking", {})
+    summaries = store.backtest_summaries(period_start=start, period_end=end, min_samples=int(tr_cfg.get("min_samples", 5)))
+    report = format_backtest_report(summaries, title="庄家雷达 v0.4 每日复盘", period_label=label)
+    digest = hashlib.sha256(report.encode("utf-8")).hexdigest()
+    if getattr(args, "dry_run", False):
+        return report
+    if not token or not chat_id:
+        raise SystemExit("缺少 Telegram 配置：请设置 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID")
+    if not store.record_review_send(start, end, f"telegram:{chat_id}", digest, force=getattr(args, "force", False)):
+        return "Telegram 复盘已发送过；如需重发请加 --force。"
+    TelegramClient(token=token, chat_id=chat_id).send_message(report)
+    return "Telegram 复盘推送完成。"
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="庄家雷达 v0.3")
-    parser.add_argument("command", nargs="?", default="scan", choices=["scan", "telegram-send", "telegram-schedule", "telegram-bot"], help="command to run")
+    parser = argparse.ArgumentParser(description="庄家雷达 v0.4")
+    parser.add_argument("command", nargs="?", default="scan", choices=["scan", "telegram-send", "telegram-schedule", "telegram-bot", "track-signals", "backtest-report", "telegram-review"], help="command to run")
     parser.add_argument("--config", default="configs/radar.yaml")
     parser.add_argument("--db", default="data/radar.db")
     parser.add_argument("--symbols", default="", help="comma separated Binance futures symbols, e.g. SAGAUSDT,REDUSDT")
@@ -206,6 +268,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--once", action="store_true", help="run one schedule/bot iteration then exit")
     parser.add_argument("--no-smart-money", action="store_true", help="disable Binance Web3/GMGN chain enrichment for this run")
+    parser.add_argument("--period", default="yesterday", choices=["today", "yesterday", "7d"], help="review/backtest period")
+    parser.add_argument("--force", action="store_true", help="force idempotent daily review resend")
+    parser.add_argument("--windows", default="", help="comma-separated tracking windows in minutes")
+    parser.add_argument("--limit", type=int, default=0, help="processing limit for tracking")
     return parser
 
 
@@ -221,6 +287,12 @@ def main(argv: list[str] | None = None) -> None:
         run_telegram_schedule(args.config, args.db, args)
     elif args.command == "telegram-bot":
         run_telegram_bot(args.config, args.db, args)
+    elif args.command == "track-signals":
+        print(run_track_signals(args.config, args.db, args))
+    elif args.command == "backtest-report":
+        print(run_backtest_report(args.config, args.db, args))
+    elif args.command == "telegram-review":
+        print(run_telegram_review(args.config, args.db, args))
 
 
 if __name__ == "__main__":

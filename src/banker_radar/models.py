@@ -96,3 +96,70 @@ class RadarSignal:
             created_at=datetime.now(timezone.utc).isoformat(),
             metadata=dict(self.metadata),
         )
+
+
+TRACKING_STATUSES = {"pending", "in_progress", "completed", "failed_retryable", "failed_permanent", "expired"}
+
+
+@dataclass(frozen=True)
+class DirectionDecision:
+    direction: str
+    source: str
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return self.direction == other
+        return super().__eq__(other)
+
+
+@dataclass(frozen=True)
+class SignalTrackingRecord:
+    signal_id: int
+    symbol: str
+    kind: str
+    source: str
+    direction: str
+    signal_ts: datetime
+    entry_price: float
+    window_minutes: int
+    due_ts: datetime
+    id: int | None = None
+    status: str = "pending"
+    observed_price: float | None = None
+    high_price: float | None = None
+    low_price: float | None = None
+    return_pct: float | None = None
+    max_runup_pct: float | None = None
+    max_drawdown_pct: float | None = None
+    success: bool | None = None
+    error: str = ""
+    retry_count: int = 0
+    price_provider: str = ""
+    provider_interval: str = ""
+    metadata: dict = field(default_factory=dict)
+
+    def is_due(self, now: datetime) -> bool:
+        return self.status == "pending" and now >= self.due_ts
+
+
+@dataclass(frozen=True)
+class BacktestSummary:
+    kind: str
+    window_minutes: int
+    total: int
+    wins: int
+    avg_return_pct: float
+    directional_total: int | None = None
+    avg_max_runup_pct: float = 0.0
+    avg_max_drawdown_pct: float = 0.0
+    min_samples: int = 5
+    outlier_count: int = 0
+
+    @property
+    def win_rate_pct(self) -> float:
+        denominator = self.directional_total if self.directional_total is not None else self.total
+        return (self.wins / denominator * 100) if denominator else 0.0
+
+    @property
+    def sample_warning(self) -> str:
+        return "样本不足" if self.total < self.min_samples else ""

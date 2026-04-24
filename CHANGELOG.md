@@ -2,6 +2,22 @@
 
 All notable changes to Banker Radar are documented here.
 
+## v0.4.0
+
+### Added
+
+- Signal tracking table and state machine: `pending -> in_progress -> completed/failed/expired`.
+- Automatic tracking windows: 15m / 1h / 4h / 24h.
+- Backtest metrics: return, max runup, max drawdown, directional win rate, low-sample and outlier warnings.
+- CLI commands: `track-signals`, `backtest-report`, `telegram-review`.
+- Persistent `provider_cooldowns` and idempotent `review_sends` tables for systemd oneshot safety.
+- PostgreSQL schema using `ON CONFLICT DO NOTHING` and `FOR UPDATE SKIP LOCKED`; SQLite fallback kept for tests/local use.
+- systemd unit templates for tracking and daily review timers.
+
+### Notes
+
+- Daily reviews are statistics about post-signal price movement only; they are not trading PnL and do not include slippage, fees, or fill availability.
+
 ## v0.3.0
 
 ### Added

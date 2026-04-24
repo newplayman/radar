@@ -43,3 +43,19 @@ def format_report(signals: list[RadarSignal], *, title: str = "庄家雷达 v0.1
 
     lines.append("⚠️ 非投资建议，仅为市场异动监控。")
     return "\n".join(lines)
+
+
+
+def format_backtest_report(summaries, *, title: str = "庄家雷达 v0.4 复盘", period_label: str = "昨日") -> str:
+    now = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M CST")
+    lines = [f"📈 {title}", f"周期：{period_label}", f"⏰ {now}", ""]
+    if not summaries:
+        lines += ["暂无已完成追踪样本。", "", "⚠️ 非投资建议；复盘仅为信号后价格表现统计，未计滑点/手续费/真实成交可得性。"]
+        return "\n".join(lines)
+    for s in summaries[:12]:
+        warn = f"｜{s.sample_warning}" if s.sample_warning else ""
+        outlier = f"｜异常样本:{s.outlier_count}" if getattr(s, "outlier_count", 0) else ""
+        lines.append(f"{s.kind} {s.window_minutes}m｜样本:{s.total}｜方向样本:{s.directional_total if s.directional_total is not None else s.total}{warn}{outlier}")
+        lines.append(f"胜率:{s.win_rate_pct:.1f}%｜平均收益:{s.avg_return_pct:+.2f}%｜平均回撤:{s.avg_max_drawdown_pct:+.2f}%｜平均最大顺势:{s.avg_max_runup_pct:+.2f}%")
+    lines += ["", "⚠️ 非投资建议；复盘仅为信号后价格表现统计，未计滑点/手续费/真实成交可得性。"]
+    return "\n".join(lines)

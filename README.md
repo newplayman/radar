@@ -1,4 +1,4 @@
-# 庄家雷达 / Banker Radar v0.3
+# 庄家雷达 / Banker Radar v0.4
 
 MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜”思路模块化，并接入当前机器上的 Binance 公共合约数据、OKX CLI 公共市场数据、Binance Web3/GMGN 聪明钱增强，以及 Telegram 推送/查询入口。
 
@@ -26,7 +26,8 @@ MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜
   - Token Audit 高风险过滤，拦截 honeypot/高风险权限的正向榜单。
   - 新增 `🧠 链上聪明钱榜` 与 `🧬 链上链下共振榜`。
 - PostgreSQL JSONB 存储后端，SQLite 继续作为测试/fallback。
-- 单元测试覆盖 CLI、配置、Telegram、评分、限流 fallback、formatter、存储等核心逻辑。
+- Signal Tracking v0.4：15m/1h/4h/24h 信号追踪、回测统计、每日 Telegram 复盘。
+- 单元测试覆盖 CLI、配置、Telegram、评分、限流 fallback、formatter、存储、追踪/回测等核心逻辑。
 
 ## 项目文档
 
@@ -56,7 +57,7 @@ banker-radar scan --no-smart-money --db data/radar.db
 优先使用环境变量配置，避免把 token 写进仓库：
 
 ```bash
-export TELEGRAM_BOT_TOKEN='xxx'
+export TELEGRAM_BOT_TOKEN='***'
 export TELEGRAM_CHAT_ID='-100xxxxxxxxxx'
 export TELEGRAM_BOT_USERNAME='ctb007_bot'
 export TELEGRAM_REQUIRE_MENTION=true
@@ -100,6 +101,24 @@ banker-radar telegram-bot --db data/radar.db
 
 注意：如果同一个 Telegram bot token 已经被 Hermes gateway 用 `getUpdates` 轮询，不能同时启动本项目的 `telegram-bot` 长轮询，否则 Telegram 会报 polling conflict。`telegram-send` 和 `telegram-schedule` 只调用 `sendMessage`，不会与 Hermes gateway 轮询冲突。
 
+## v0.4 信号追踪与复盘
+
+```bash
+# 将近期信号加入追踪队列，并处理已到期窗口
+banker-radar track-signals --db data/radar.db
+
+# 打印昨日复盘，不发送 Telegram
+banker-radar backtest-report --period yesterday --db data/radar.db
+
+# 发送昨日复盘；默认幂等，同一周期/频道只发一次
+banker-radar telegram-review --period yesterday --db data/radar.db
+
+# 如需重发
+banker-radar telegram-review --period yesterday --force --db data/radar.db
+```
+
+复盘仅统计信号出现后价格表现，不代表真实交易收益；未计滑点、手续费、成交可得性。systemd 模板见 `deploy/systemd/`。
+
 ## 配置
 
 配置文件：`configs/radar.yaml`
@@ -142,9 +161,8 @@ telegram:
 - `smart_money.limit` 与 `max_audits_per_scan` 默认偏保守，避免免费/订阅额度被一次扫描打满。
 - `--no-smart-money` 可作为紧急降级开关，Telegram 推送和查询仍能输出合约雷达。
 
-## 下一步 v0.4
+## 下一步 v0.5
 
-1. 信号落库后的 15m/1h/4h/24h 追踪回测。
-2. 每日自动生成“昨日信号复盘”。
-3. OKX/Binance 同币种共振合并，避免重复并提升可信度。
-4. 更细的单币分析：盘口、主动成交、大单、观察位。
+1. OKX/Binance 同币种共振合并，避免重复并提升可信度。
+2. 更细的单币分析：盘口、主动成交、大单、观察位。
+3. watchlist 和单币观察位/失效条件。

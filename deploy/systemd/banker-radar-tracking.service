@@ -1,0 +1,10 @@
+[Unit]
+Description=Banker Radar signal tracking worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/banker-radar
+EnvironmentFile=-/root/banker-radar/.env
+ExecStart=/usr/bin/flock -n /run/banker-radar-tracking.lock /usr/local/bin/banker-radar track-signals --config /root/banker-radar/configs/radar.yaml --db /root/banker-radar/data/radar.db

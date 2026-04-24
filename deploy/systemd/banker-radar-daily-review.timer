@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Banker Radar daily review every morning
+
+[Timer]
+OnCalendar=*-*-* 09:05:00
+AccuracySec=1min
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
