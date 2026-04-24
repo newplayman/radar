@@ -1,0 +1,23 @@
+scan:
+  quote: USDT
+  inst_type: SWAP
+  binance_limit: 40
+  okx_limit: 40
+
+accumulation:
+  min_sideways_days: 45
+  max_range_pct: 80
+  max_avg_vol_usd: 20000000
+  max_abs_slope_pct: 12
+
+oi:
+  min_delta_pct_1h: 3
+  min_oi_usd: 2000000
+
+funding:
+  negative_threshold_pct: -0.005
+  extreme_negative_threshold_pct: -0.05
+
+alerts:
+  min_score: 60
+  top_n: 5
