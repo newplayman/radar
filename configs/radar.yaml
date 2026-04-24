@@ -21,3 +21,12 @@ funding:
 alerts:
   min_score: 60
   top_n: 5
+
+telegram:
+  # 优先读取环境变量，避免把 token 写入仓库：
+  # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_BOT_USERNAME, TELEGRAM_REQUIRE_MENTION
+  bot_token: ""
+  chat_id: ""
+  bot_username: "ctb007_bot"
+  require_mention: true
+  interval_minutes: 60
