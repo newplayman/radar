@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from banker_radar.collectors.price_observer import KlineCache, RequestBudget, classify_price_error, observe_binance_window
+from banker_radar.collectors.price_observer import KlineCache, RequestBudget, classify_price_error, normalize_binance_symbol, observe_binance_window
 from banker_radar.models import SignalTrackingRecord
 from banker_radar.tracking.performance import calculate_performance
 
@@ -21,17 +21,18 @@ def process_due_tracking(store, *, now: datetime | None = None, limit: int = 50,
     records = store.due_tracking_records(now=now, limit=limit)
     for record in records:
         stats["processed"] += 1
-        if record.entry_price <= 0:
-            # v0.4 hardening: do not loop forever if no entry price was captured.
-            store.fail_tracking(record, status="failed_permanent", error="missing_entry_price")
-            stats["skipped_no_entry"] += 1
-            stats["failed_permanent"] += 1
-            continue
         try:
             start_ms = int(record.signal_ts.timestamp() * 1000)
             end_ms = int(record.due_ts.timestamp() * 1000)
-            obs = observe_binance_window(record.symbol, start_ms, end_ms, interval=interval, budget=request_budget, cache=cache)
-            perf = calculate_performance(record.direction, entry=record.entry_price, observed=obs.observed_price, high=obs.high_price, low=obs.low_price, success_threshold_pct=success_threshold_pct, outlier_return_pct=outlier_return_pct)
+            symbol = normalize_binance_symbol(record.symbol)
+            obs = observe_binance_window(symbol, start_ms, end_ms, interval=interval, budget=request_budget, cache=cache)
+            entry_price = record.entry_price if record.entry_price > 0 else float(obs.entry_price or 0)
+            if entry_price <= 0:
+                store.fail_tracking(record, status="failed_permanent", error="missing_entry_price")
+                stats["skipped_no_entry"] += 1
+                stats["failed_permanent"] += 1
+                continue
+            perf = calculate_performance(record.direction, entry=entry_price, observed=obs.observed_price, high=obs.high_price, low=obs.low_price, success_threshold_pct=success_threshold_pct, outlier_return_pct=outlier_return_pct)
             store.complete_tracking(
                 record,
                 observed_price=obs.observed_price,

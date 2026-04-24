@@ -7,8 +7,8 @@ from banker_radar.storage.sqlite import RadarStore
 from banker_radar.tracking.service import enqueue_tracking_for_recent_signals, process_due_tracking, summarize_completed_tracking
 
 
-def _signal(symbol="ABCUSDT", kind="空头燃料", metadata=None):
-    return RadarSignal(symbol=symbol, kind=kind, score=80, reason="reason", risk="中", source="binance", created_at="2026-04-24T08:00:00+00:00", metadata=metadata or {})
+def _signal(symbol="ABCUSDT", kind="空头燃料", metadata=None, source="binance"):
+    return RadarSignal(symbol=symbol, kind=kind, score=80, reason="reason", risk="中", source=source, created_at="2026-04-24T08:00:00+00:00", metadata=metadata or {})
 
 
 def test_sqlite_tracking_schema_enqueue_is_idempotent_and_copies_risk_metadata(tmp_path: Path):
@@ -80,3 +80,22 @@ def test_tracking_service_respects_persistent_provider_cooldown_before_claiming_
     assert stats["skipped_provider_blocked"] == 1
     # The pending record was not claimed into in_progress, so it can be processed next cycle.
     assert len(store.due_tracking_records(now=now + timedelta(minutes=16), limit=10)) == 1
+
+
+def test_tracking_service_backfills_missing_entry_price_for_okx_symbol(tmp_path: Path, monkeypatch):
+    store = RadarStore(tmp_path / "radar.db")
+    store.init()
+    store.save_signal(_signal(symbol="INJ-USDT-SWAP", source="okx", metadata={}))
+    store.enqueue_tracking(windows_minutes=[15])
+
+    def fake_observe(symbol, start_ms, end_ms, interval="15m", budget=None, cache=None):
+        assert symbol == "INJUSDT"
+        from banker_radar.collectors.price_observer import PriceObservation
+        return PriceObservation(symbol=symbol, entry_price=100, observed_price=106, high_price=108, low_price=99, provider="binance", interval=interval)
+
+    monkeypatch.setattr("banker_radar.tracking.service.observe_binance_window", fake_observe)
+    stats = process_due_tracking(store, now=datetime(2026, 4, 24, 8, 20, tzinfo=timezone.utc), limit=10)
+
+    assert stats["completed"] == 1
+    summaries = store.backtest_summaries(period_start=datetime(2026, 4, 24, tzinfo=timezone.utc), period_end=datetime(2026, 4, 25, tzinfo=timezone.utc), min_samples=1)
+    assert summaries[0].avg_return_pct == 6

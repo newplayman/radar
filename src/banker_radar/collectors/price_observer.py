@@ -19,6 +19,22 @@ class PriceObservation:
     kline_count: int = 0
     observation_start_ts: datetime | None = None
     observation_end_ts: datetime | None = None
+    # First close price inside the observation window. Used to backfill legacy
+    # v0.1-v0.3 signals that did not store an entry price.
+    entry_price: float | None = None
+
+
+def normalize_binance_symbol(symbol: str) -> str:
+    """Convert common exchange-specific contract symbols to Binance futures form.
+
+    Examples:
+    - INJ-USDT-SWAP -> INJUSDT
+    - BTCUSDT -> BTCUSDT
+    """
+    value = symbol.strip().upper()
+    if value.endswith("-USDT-SWAP"):
+        return value.replace("-USDT-SWAP", "USDT")
+    return value.replace("-", "") if "-" in value and value.endswith("USDT") else value
 
 
 @dataclass
@@ -59,9 +75,10 @@ def parse_klines_observation(symbol: str, rows: list[list], *, provider: str, in
     highs = [float(r[2]) for r in rows]
     lows = [float(r[3]) for r in rows]
     observed = float(rows[-1][4])
+    entry = float(rows[0][4])
     start = _ms_to_dt(rows[0][0])
     end = _ms_to_dt(rows[-1][6] if len(rows[-1]) > 6 else rows[-1][0])
-    return PriceObservation(symbol=symbol, observed_price=observed, high_price=max(highs), low_price=min(lows), provider=provider, interval=interval, kline_count=len(rows), observation_start_ts=start, observation_end_ts=end)
+    return PriceObservation(symbol=symbol, observed_price=observed, high_price=max(highs), low_price=min(lows), provider=provider, interval=interval, kline_count=len(rows), observation_start_ts=start, observation_end_ts=end, entry_price=entry)
 
 
 def fetch_binance_klines_window(symbol: str, start_ts_ms: int, end_ts_ms: int, interval: str = "15m") -> list[list]:
@@ -71,9 +88,10 @@ def fetch_binance_klines_window(symbol: str, start_ts_ms: int, end_ts_ms: int, i
 def observe_binance_window(symbol: str, start_ts_ms: int, end_ts_ms: int, interval: str = "15m", budget: RequestBudget | None = None, cache: KlineCache | None = None) -> PriceObservation:
     if budget and not budget.consume("binance"):
         raise RuntimeError("request_budget_exhausted")
+    binance_symbol = normalize_binance_symbol(symbol)
     fetcher = fetch_binance_klines_window
-    rows = cache.get("binance", symbol, interval, start_ts_ms, end_ts_ms, fetcher) if cache else fetcher(symbol, start_ts_ms, end_ts_ms, interval)
-    return parse_klines_observation(symbol, rows, provider="binance", interval=interval)
+    rows = cache.get("binance", binance_symbol, interval, start_ts_ms, end_ts_ms, fetcher) if cache else fetcher(binance_symbol, start_ts_ms, end_ts_ms, interval)
+    return parse_klines_observation(binance_symbol, rows, provider="binance", interval=interval)
 
 
 def classify_price_error(exc: Exception) -> str:

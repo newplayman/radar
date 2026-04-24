@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from banker_radar.collectors.price_observer import KlineCache, RequestBudget, parse_klines_observation
+from banker_radar.collectors.price_observer import KlineCache, RequestBudget, normalize_binance_symbol, parse_klines_observation
 
 
 def test_parse_klines_observation_calculates_close_high_low_and_times():
@@ -44,3 +44,19 @@ def test_kline_cache_reuses_same_symbol_provider_interval_request():
 def test_parse_klines_observation_rejects_empty_rows():
     with pytest.raises(ValueError, match="no_klines"):
         parse_klines_observation("BADUSDT", [], provider="binance")
+
+
+def test_normalize_binance_symbol_converts_okx_swap_symbol():
+    assert normalize_binance_symbol("INJ-USDT-SWAP") == "INJUSDT"
+    assert normalize_binance_symbol("BTCUSDT") == "BTCUSDT"
+
+
+def test_parse_klines_observation_captures_entry_price_from_first_close():
+    obs = parse_klines_observation(
+        "ABCUSDT",
+        [[1000, "9", "12", "8", "10", "1", 2000], [2000, "10", "15", "9", "14", "1", 3000]],
+        provider="binance",
+        interval="15m",
+    )
+    assert obs.entry_price == 10
+    assert obs.observed_price == 14
