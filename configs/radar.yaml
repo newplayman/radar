@@ -22,6 +22,43 @@ alerts:
   min_score: 60
   top_n: 5
 
+smart_money:
+  enabled: true
+  # 免费/订阅额度保护：低频、低 limit；被限流时当前进程会进入冷却并降级到下一个 provider。
+  limit: 30
+  min_score: 60
+  min_smart_wallets: 2
+  max_exit_rate_pct: 50
+  max_gain_pct_for_fresh_signal: 80
+  provider_order:
+    - binance_web3
+    - gmgn
+  allowed_chains:
+    - sol
+    - bsc
+    - base
+    - eth
+  timeout_seconds: 20
+  max_audits_per_scan: 5
+
+resonance:
+  min_score: 75
+
+gmgn:
+  enabled: true
+  cli_path: "gmgn-cli"
+  smartmoney_limit: 30
+  timeout_seconds: 20
+
+storage:
+  # 运行环境可改为 postgres，并在 .env 设置 DATABASE_URL；缺失时自动回落到 --db SQLite。
+  backend: sqlite
+  postgres:
+    url_env: DATABASE_URL
+    psql_path: psql
+  sqlite:
+    path: data/radar.db
+
 telegram:
   # 优先读取环境变量，避免把 token 写入仓库：
   # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_BOT_USERNAME, TELEGRAM_REQUIRE_MENTION

@@ -1,6 +1,6 @@
-# 庄家雷达 / Banker Radar v0.2
+# 庄家雷达 / Banker Radar v0.3
 
-MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜”思路模块化，并接入当前机器上的 Binance 公共合约数据、OKX CLI 公共市场数据，以及 Telegram 推送/查询入口。
+MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜”思路模块化，并接入当前机器上的 Binance 公共合约数据、OKX CLI 公共市场数据、Binance Web3/GMGN 聪明钱增强，以及 Telegram 推送/查询入口。
 
 > 当前版本只做异动监控与解释，不做自动交易；输出不是投资建议。
 
@@ -20,7 +20,13 @@ MVP 目标：把 `accumulation-radar` 的“收筹池 + 暗流信号 + 轧空榜
   - `telegram-schedule`：按间隔定时扫描并推送。
   - `telegram-bot`：长轮询处理 `@提及` 查询。
   - 群组内默认 `require_mention=true`，只响应 @bot 的消息。
-- 单元测试覆盖 CLI、配置、Telegram、评分等核心逻辑。
+- Smart Money v0.3：
+  - Binance Web3 Smart Money 解析与 GMGN CLI fallback。
+  - 免费/订阅额度保护：低频采样、provider cooldown、自恢复、链上模块失败时降级为纯合约雷达。
+  - Token Audit 高风险过滤，拦截 honeypot/高风险权限的正向榜单。
+  - 新增 `🧠 链上聪明钱榜` 与 `🧬 链上链下共振榜`。
+- PostgreSQL JSONB 存储后端，SQLite 继续作为测试/fallback。
+- 单元测试覆盖 CLI、配置、Telegram、评分、限流 fallback、formatter、存储等核心逻辑。
 
 ## 项目文档
 
@@ -38,8 +44,11 @@ python3 -m pytest -q
 # 指定币种测试扫描
 banker-radar scan --symbols BTCUSDT,ETHUSDT,SOLUSDT --db data/test-radar.db
 
-# 默认扫描：Binance top symbols + OKX OI榜
+# 默认扫描：Binance top symbols + OKX OI榜 + Smart Money增强
 banker-radar scan --db data/radar.db
+
+# 免费额度紧张/链上 API 限流时，强制只跑合约雷达
+banker-radar scan --no-smart-money --db data/radar.db
 ```
 
 ## Telegram 使用
@@ -96,7 +105,6 @@ banker-radar telegram-bot --db data/radar.db
 配置文件：`configs/radar.yaml`
 
 关键项：
-
 ```yaml
 scan:
   binance_limit: 40
@@ -106,6 +114,19 @@ alerts:
   min_score: 60
   top_n: 5
 
+smart_money:
+  enabled: true
+  limit: 30
+  provider_order: [binance_web3, gmgn]
+  allowed_chains: [sol, bsc, base, eth]
+  max_audits_per_scan: 5
+
+storage:
+  backend: sqlite  # 可切换 postgres
+  postgres:
+    url_env: DATABASE_URL
+    psql_path: /usr/bin/psql
+
 telegram:
   bot_token: ""
   chat_id: ""
@@ -114,9 +135,16 @@ telegram:
   interval_minutes: 60
 ```
 
-## 下一步 v0.3
+## v0.3 限流与自恢复策略
 
-1. Binance Web3 Smart Money 榜接入。
-2. 信号落库后的 15m/1h/4h/24h 追踪回测。
+- Binance Web3 优先，GMGN 次级；任一 provider 报 `429/rate limit/too many requests` 会进入 cooldown。
+- cooldown 期间自动跳过该 provider，后续进程内按时间自恢复，不影响 OKX/Binance 合约扫描。
+- `smart_money.limit` 与 `max_audits_per_scan` 默认偏保守，避免免费/订阅额度被一次扫描打满。
+- `--no-smart-money` 可作为紧急降级开关，Telegram 推送和查询仍能输出合约雷达。
+
+## 下一步 v0.4
+
+1. 信号落库后的 15m/1h/4h/24h 追踪回测。
+2. 每日自动生成“昨日信号复盘”。
 3. OKX/Binance 同币种共振合并，避免重复并提升可信度。
 4. 更细的单币分析：盘口、主动成交、大单、观察位。

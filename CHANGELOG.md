@@ -2,6 +2,26 @@
 
 All notable changes to Banker Radar are documented here.
 
+## v0.3.0
+
+### Added
+
+- Binance Web3 Smart Money collector and parser.
+- GMGN CLI Smart Money fallback and token security parser.
+- Provider fallback with cooldown/backoff for free-tier/subscription rate limits.
+- Chain Smart Money scoring with high-risk Token Audit blocking.
+- Chain/contract resonance signals and Telegram sections:
+  - `🧠 链上聪明钱榜`
+  - `🧬 链上链下共振榜`
+- PostgreSQL JSONB storage backend via `psql`, with SQLite fallback/test backend retained.
+- `--no-smart-money` CLI flag for emergency degradation to pure contract radar.
+- v0.3 unit tests for collectors, rate-limit recovery, scoring, resonance, formatter, CLI flag, and storage factory.
+
+### Notes
+
+- Smart Money enrichment is intentionally non-critical: if Binance Web3/GMGN is limited or unavailable, OKX/Binance contract radar continues to run.
+- Default sampling limits are conservative to protect free or subscribed API/skill quotas.
+
 ## v0.2.0
 
 ### Added

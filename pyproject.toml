@@ -1,7 +1,7 @@
 [project]
 name = "banker-radar"
-version = "0.2.0"
-description = "庄家雷达 v0.2: accumulation + OI/funding radar + Telegram alerts"
+version = "0.3.0"
+description = "庄家雷达 v0.3: contract anomaly radar + Telegram + smart-money resonance"
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0"]
 

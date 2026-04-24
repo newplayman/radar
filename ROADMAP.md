@@ -6,8 +6,8 @@
 
 ## 当前状态
 
-- 当前版本：v0.2.0
-- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、SQLite 落库、Telegram 定时播报和 @提及查询。
+- 当前版本：v0.3.0
+- 核心能力：Binance/OKX 公共合约数据扫描、收筹/暗流/轧空/综合异动评分、Binance Web3/GMGN 聪明钱增强、链上链下共振榜、SQLite/PostgreSQL 存储、Telegram 定时播报和 @提及查询。
 - 部署形态：CLI + systemd timer/service。
 
 ## Milestone 0 — 项目启动与 v0.1 MVP（已完成）
@@ -38,18 +38,19 @@
 - 群组只响应 @提及，避免打扰普通聊天。
 - 独立 Telegram 机器人部署验证。
 
-## Milestone 2 — v0.3 Smart Money 与共振信号
+## Milestone 2 — v0.3 Smart Money 与共振信号（已完成）
 
 目标：接入 Binance Web3 / 链上聪明钱数据，形成“链上 + 合约”共振判断。
 
-计划：
+已完成：
 
-- Smart Money Buy/Sell 数据采集。
+- Smart Money Buy/Sell 数据采集与标准化模型。
+- Binance Web3 优先 + GMGN CLI fallback。
+- 免费/订阅额度保护：低频 limit、provider cooldown、自恢复、`--no-smart-money` 降级开关。
 - Whale Buy/Sell、exitRate、maxGain、token tag 解析。
-- Token Audit 风险过滤。
-- Meme Rush / 市场热度作为预热信号。
+- Token Audit 风险过滤，高风险 token 不进入正向 Smart Money 榜单。
 - 新增榜单：`🧠 链上聪明钱榜`、`🧬 链上链下共振榜`。
-- 合并同一标的在 OKX/Binance/链上的多源信号，减少重复推送。
+- PostgreSQL JSONB 存储后端，SQLite 作为测试/fallback。
 
 ## Milestone 3 — v0.4 信号追踪与回测
 

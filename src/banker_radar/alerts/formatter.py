@@ -8,6 +8,10 @@ from banker_radar.models import RadarSignal
 
 
 def _section_title(kind: str) -> str:
+    if kind == "链上链下共振":
+        return "🧬 链上链下共振榜"
+    if kind == "链上聪明钱":
+        return "🧠 链上聪明钱榜"
     if kind == "暗流吸筹":
         return "🎯 暗流/埋伏榜"
     if kind == "空头燃料":
@@ -26,7 +30,7 @@ def format_report(signals: list[RadarSignal], *, title: str = "庄家雷达 v0.1
     for s in sorted(signals, key=lambda x: x.score, reverse=True):
         groups[_section_title(s.kind)].append(s)
 
-    order = ["🔥 轧空/追多榜", "🎯 暗流/埋伏榜", "📊 综合异动榜"]
+    order = ["🧬 链上链下共振榜", "🧠 链上聪明钱榜", "🔥 轧空/追多榜", "🎯 暗流/埋伏榜", "📊 综合异动榜"]
     for section in order:
         rows = groups.get(section, [])
         if not rows:
